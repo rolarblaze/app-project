@@ -1,0 +1,31 @@
+apiVersion: apps/v1 
+kind: Deployment 
+metadata: 
+  name: frontend-app-deployment 
+  labels:
+    app: app-frontend 
+spec: 
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-frontend 
+  template:
+    metadata:
+      labels: 
+        app: app-frontend
+    spec:
+      containers: 
+      - name: app-frontend
+        image: blueninjas/frontend:v1 
+        ports: 
+          - containerPort: 80 
+        env: 
+          - name: APP_ENV 
+            value: "development"
+        resources:
+          requests:
+            memory: "64Mi" 
+            cpu: "50m" 
+          limits:
+            memory: "128Mi"
+            cpu: "100m" 

@@ -1,0 +1,39 @@
+apiVersion: apps/v1 
+kind: Deployment 
+metadata: 
+  name: backend-app-deployment 
+  labels: 
+    app: app-backend 
+spec: 
+  replicas: 2 
+  selector: 
+    matchLabels: 
+      app: app-backend
+  template: 
+    metadata: 
+      labels: 
+        app: app-backend 
+    spec: 
+      containers: 
+      - name: app-backend 
+        image: blueninjas/backend-db:v1.1
+        ports: 
+          - containerPort: 3306 
+        env: 
+          - name: MYSQL_ROOT_PASSWORD
+            value: "devopsclass" 
+          - name: MYSQL_DATABASE
+            value: "sample" 
+        resources:
+          requests:
+            memory: "256Mi" 
+            cpu: "100m"
+          limits: 
+            memory: "512Mi"
+            cpu: "200m"
+        volumeMounts: 
+          - name: backend-data
+            mountPath: /var/lib/mysql 
+      volumes: 
+        - name: backend-data 
+          emptyDir: {} 
