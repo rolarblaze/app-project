@@ -1,0 +1,11 @@
+apiVersion: v1 
+kind: configMap 
+metadata: 
+  name: app-config 
+  namespace: production 
+data: 
+  app_env: "production" 
+  mysql_host: "backend-db.production.svc.cluster.local"
+  mysql_port: "3306" 
+  log_level: "info" 
+  max_connections: "100" 

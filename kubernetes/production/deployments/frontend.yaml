@@ -1,0 +1,100 @@
+apiVersion: apps/v1 
+kind: Deployment 
+metadata: 
+  name: frontend-app-deployment 
+  labels: 
+    app: app-frontend 
+spec: 
+  replicas: 3 
+  strategy: 
+    type: RollingUpdate 
+    rollingUpdate: 
+      maxSurge: 1 
+      maxUnavailable: 1 
+  selector: 
+    matchLabels: 
+      app: app-frontend  
+      tier: frontend 
+  template: 
+    metadata: 
+      labels: 
+        app: app-frontend 
+        tier: frontend 
+    spec: 
+      serviceAccountName: app-service-account 
+      securityContext: 
+        runAsNonRoot: true 
+        runAsUser: 33
+        fsGroup: 33 
+      containers: 
+      - name: app-frontend 
+        image: blueninjas/app-frontend:v1.2
+        ports: 
+        - containerPort: 80 
+          name: http
+        env: 
+        - name: APP_ENV 
+          valueFrom: 
+            configMapKeyRef: 
+              name: app-config 
+              key: app_env 
+        - name: DB_HOST 
+          valueFrom:
+            configMapKeyRef: 
+              name: app-config 
+              key: mysql_host
+        - name: DB_PORT 
+          valueFrom:
+            configMapKeyRef:
+              name: app-config 
+              key: mysql_port
+        - name: DB_USERNAME 
+          valueFrom: "app_user"
+        - name: DB_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: mysql-secret
+              key: root_password
+        - name: DB_DATABASE 
+          valueFrom: 
+            secretKeyRef:
+              name: mysql-secret 
+              key: database_name 
+        resources: 
+            requests: 
+              memory: "128Mi" 
+              cpu: "100m" 
+            limits: 
+              memory: "256Mi" 
+              cpu: "200m" 
+        livenessProbe: 
+          httpGet: 
+            path: /healthz 
+            port: 80 
+            initialDelaySeconds: 30 
+            periodSeconds: 10 
+        readinessProbe: 
+          httpGet:
+            path: /ready 
+            port: 80 
+          initialDelaySeconds: 5 
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true 
+          readOnlyRootFilesystem: true 
+          allowPrivilegeEscalation: false 
+          capabilities:
+            drop: 
+              - ALL 
+        volumeMounts: 
+          - name: frontend-volume 
+            mountPath: /tmp 
+          - name: var-run-volume 
+            mountPath: /var/run 
+        volumes: 
+          - name: frontend-volume
+            emptyDir: {} 
+          - name: var-run-volume 
+            emptyDir: {} 
+      
+            

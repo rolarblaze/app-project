@@ -1,68 +1,160 @@
-
 Classes Microservices
 
+Overview
 
-Overview 
-
-Classes is a microservice based application. It demonstrate the migration of a monolithic application to a microservices architecture.
-
-It consists of a frontend and a backend, with the backend logic running on PHP. The micrososervice orchastration is deployed using kubernetes(K3s) on azure infrastructure.
-
-The services run on a master and worker node within the same subnet on the same network layer.
-
-Note: this is designed for development purposes with plans for production refactoring later 
+Classes is a microservices-based application demonstrating the migration from a monolithic architecture to a distributed system. 
+It consists of a frontend microservice and a PHP-based backend microservice connected to a MySQL database, 
+orchestrated using Kubernetes (k3s) on Azure infrastructure for development. 
+The services run on a master and worker node within the same subnet, with plans for production refactoring later.
 
 
-ARCHITECTURE 
+Architecture
 
 The application is split into two microservices:
-  - Frontend: docker image build, deployed as a jubernetes deployment and exposed via a service.
-  - Backend: a php stack connected to mysql database deployed as a kubernetes Deployment and exposed via a service 
-  - Infrastructure: Vnet and subnetting hosted on Azure with k3s on a master and slave in the same subnet, using an internal network for communication
+
+Frontend: A web interface built as a Docker image, deployed as a Kubernetes Deployment, and exposed via a Service.
+
+Backend: A PHP-based API handling business logic, connected to a MySQL database, deployed as a Kubernetes Deployment and exposed via a Service.
+
+Infrastructure: Hosted on Azure with a Virtual Network (VNet) and subnet, using k3s (lightweight Kubernetes) on a master and worker node in the same subnet for internal communication.
+
+Features
+Service Components
+Frontend: React/Vue.js application containerized and deployed as a Kubernetes deployment
+Backend: PHP application stack with business logic, deployed as a Kubernetes deployment
+Database: MySQL database for persistent data storage
+
+Network Architecture
+
+Cloud Provider: Microsoft Azure (AWS compatible)
+Orchestration: k3s (Lightweight Kubernetes distribution)
+Networking: Single subnet deployment for simplified development networking
+Communication: Internal cluster networking for service-to-service communication
+External Access: NodePort services for development access
+
+Prerequisites
+    Active Azure subscription (or AWS as an alternative)
+    Permissions to create virtual networks and compute instances
+    SSH key pair for instance access
+
+Local Development Tools
+    kubectl: Kubernetes command-line tool for cluster management
+    Docker: Container runtime for building and managing images
+    Git: Version control for cloning the repository
+    SSH client: For remote server access
+    Ubuntu 20.04 LTS or later (for k3s nodes)
+    Minimum 2GB RAM per node
+    25GB disk space per node
+
+Quick Start Guide
+
+Infrastructure Setup
+    install azure CLI 
+# login to azure
+    az login 
+# select a subscription 
+1. Create Azure Resources
+
+# Create resource group
+az group create --name k3s-rg --location eastus
+
+# Create virtual network
+az network vnet create \
+    --resource-group k3s-rg \
+    --name k3s-vnet \
+    --address-prefix 10.0.0.0/16 \
+    --subnet-name k3s-subnet \
+    --subnet-prefix 10.0.0.0/24
+
+2. Launch a virtual Machine 
+    # Create k3s-master instance
+    az vm create \
+        --resource-group k3s-rg \
+        --name k3s-master \
+        --image Ubuntu24 \
+        --size Standard_B2s \
+        --subnet k3s-subnet \
+        --generate-ssh-keys
+
+3. Cluster Set up 
+Lets configure the master Node and install k3s 
+    SSH into the master node: ssh azureuser@<master-public-ip>
+# Update system packages
+    sudo apt update && sudo apt upgrade -y
+# Install k3s on master node
+    curl -sfL https://get.k3s.io | sh -
+    This installs k3s, configures systemd services, generates a node token, and creates a kubeconfig file.
+# Verify installation
+    sudo kubectl get nodes
+
+4. retrieve Cluster information 
+    # Get master node internal IP
+    hostname -I
+
+    # Get node token for worker registration
+    sudo cat /var/lib/rancher/k3s/server/node-token
+    Important: Save both the master IP and node token for worker node setup.
+    
+ 5. Configure worker Node 
+    # SSH into worker node
+    ssh azureuser@<worker-public-ip>
+
+    # Update system packages
+    sudo apt update && sudo apt upgrade -y
+
+    # Join worker to cluster (replace <master-ip> and <node-token>)
+    curl -sfL https://get.k3s.io | K3S_URL=https://<master-ip>:6443 K3S_TOKEN=<node-token> sh -
+    Replace <master-ip> and <node-token> with the values from step 
+You can also pass the TOKEN KEY and master_ip into an env call the env variables instead of directly exposing the key and IP address
+
+6. Verify Cluster 
+    # On master node, verify both nodes are ready
+    sudo kubectl get nodes
+
+7. Local Development
+    navigate to the backend directory where the Dockerfile is 
+    cd backend
+    #build and push the backend image 
+    docker build -t backend-db:latest .
+    docker tag backend-db:latest <registry>/backend-db:v1
+    docker push <registry>/backend-db:v1
+8. repeat the same process for the frontend 
+
+9. Application Deployment
+    # Clone repository on master node
+    git clone <your-repository-url>
+    cd classes-microservices
+
+    # Navigate to Kubernetes manifests
+    cd kubernetes
+
+    # Deploy backend services
+    kubectl apply -f backend/backend-deployment.yaml
+    kubectl apply -f backend/backend-deployment.yaml
+
+    # Deploy frontend services
+    kubectl apply -f frontend/frontend-service.yaml
+    kubectl apply -f frontend/backend-service.yaml
+
+8. Verify Deployment 
+    # Check all pods are running
+    kubectl get pods
+
+    # Check services are exposed
+    kubectl get services
+
+    # Check deployment status
+    kubectl get deployments
+
+    #check the namespace that the app is deployed to 
+    kubectl get ns -- it should be created on the default namespace if nothing changes 
+
+    curl ifconfig.me -- get the node public IP
+
+To view your app go to the browser 
+http://<master-public-ip>:30080 
 
 
-PREREQUISITES:
-  - active azure subscription or on aws 
-  - kubectl installed locally for cluster management 
-  - Docker installed for building container images
-  - git for Cloning the repository 
-
-Steps: 
-1. create a virtual network with a subnet on azure or AWS 
-2. launch an ubuntu instance on the subnet call it k3s-master, and k3s-worker 
-3. ssh into the the master node 
-4 run sudo apt update to update the machine 
- on the master node run curl -sfL https://get.k3s.io | sh - 
-    this script will: 
-      download and install the k3s binaries 
-      configure the systemd services 
-      generate required token
-      set up a Kubeconfig file 
-After installation you need to run a check if k3s installation was successful 
-# kubectl get nodes
-
-Next step 
-you need to get the Node_token and the master node IP 
-
-to get the master node internal IP 
-Hostname or hostname -I on the master node, copy it to a txt file 
-to get the Node Token Key run 
-cat /var/lib/rancher/k3s/server/node_token on the master 
-
-Now lets get the worker node working, and connected to the master node 
-curl -sfL https://get.k3s.io | K3S_URL=https://<master-ip>:6443 K3S_TOKEN=<node-token> sh -  replaces the <master-ip> and <node_token> with your values do this on the worker node
-
-
-navigate back to your master node and run kubectl get nodes, you should now see two nodes running. if this is succesfull it means both the master and worker node has established a successful communication 
-
-git clone the repository to your master 
-cd into the project directory cd /app-project/kubernetes
-kubectl apply -f /backend/frontend-deploy.yaml 
-
-do this for all the deployemnt and services
-
-To view the application 
-public-ip:30080 on your browser 
 
 
 
