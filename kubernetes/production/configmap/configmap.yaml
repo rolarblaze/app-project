@@ -9,3 +9,20 @@ data:
   mysql_port: "3306" 
   log_level: "info" 
   max_connections: "100" 
+
+
+--- 
+apiVersion: v1 
+kind: configMap
+metadata: 
+  name: php-config 
+  namespace: production 
+data: 
+  custom.ini: | 
+    memory_limit = 256M 
+    max_execution_time = 300 
+    upload_max_filesize = 10M 
+    post_max_size = 10M 
+    display_errors = Off 
+    log_errors = On 
+    error_log = /var/log/php_errors.log 

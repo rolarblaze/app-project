@@ -17,6 +17,28 @@ metadata:
       protocol: TCP 
     type: ClusterIP
 
+# Headless service for MySQL StatefulSet
+--- 
+apiVersion: v1 
+kind: service 
+metadata: 
+  name: mysql-headless-service 
+  namespace: production 
+  labels: 
+    app: app-backend
+    tier: database 
+spec: 
+  clusterIP: None
+  selector: 
+    app: app-backend
+    tier: database
+  ports: 
+  - name: mysql 
+    port: 3306 
+    targetPort: 3306
+    protocol: TCP 
+
+# Frontend service
 --- 
 apiVersion: v1 
 kind: Services 
