@@ -1,0 +1,57 @@
+apiVersion: network.k8s.io/v1 
+kind: NetworkPolicy 
+metadata: 
+  name: backend-netpol 
+  namespace: production
+spec: 
+  podSelector: 
+    matchLabels: 
+      app: app-backend 
+      tier: database 
+  policytypes: 
+  - Ingress:
+  ingress:
+  - from: 
+    - podSelector: 
+        matchLabels: 
+          app: app-frontend 
+          tier: frontend
+    ports: 
+    - protocol: TCP 
+      ports: 3306
+
+
+---
+apiVersion: network.k8s.io/v1 
+kind: NetworkPolicy 
+metadata: 
+  name: frontend-netpol 
+  namespace: production
+spec: 
+  podSelector: 
+    matchLabels: 
+      app: app-frontend 
+      tier: frontend
+  policytypes: 
+  - Ingress:
+  - Egress: 
+  ingress:
+  - from: []
+    ports: 80 
+  egress:
+  - to:
+    - podSelector: 
+        matchLabels: 
+          app: app-backend 
+          tier: database
+    ports:
+    - protocol: TCP 
+      ports: 3306 
+  - to: []
+    ports: 
+    - protocol: TCP 
+      port: 53 
+    - protocol: UDP 
+      port: 53 
+
+    

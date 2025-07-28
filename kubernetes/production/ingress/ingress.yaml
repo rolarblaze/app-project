@@ -1,0 +1,112 @@
+apiVersion: networking.k8s.io/v1 
+kind: Ingress 
+metadata: 
+  name: frontend-ingress 
+  namespace: production 
+  annotations: 
+    kubernetes.io/ingress.class: "traefik"
+    # SSL and TLS configuration
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/redirect-to-https: "true" 
+    # security and performance 
+    traefik.ingress.kubernetes.io/router.middlewares: "production-app-security@kubernetescrd,production-app-rate-limit@kubernetescrd"
+    # timeout settings and buffering
+    traefik.ingress.kubernetes.io/router.timeout: "60s" 
+
+    # for proper load balancing  
+    traefik.ingress.kubernetes.io/service.io/service.sticky.cookie: "false"
+spec: 
+  tls: 
+    - hosts: 
+      - mydomain.com 
+      - www.mydomain.com
+      secretName: app-tls-secret 
+  rules: 
+    - host: mydomain.com
+      http:
+        paths: 
+        - path: /
+          pathtype: Prefix 
+          backend: 
+            service: 
+              name: frontend-service 
+              port: 
+                number: 80
+    - host: www.mydomain.com
+      http:
+        paths:
+        - path: / 
+          pathType: Prefix 
+          backend: 
+            service: 
+              name: frontend-service 
+              port: 
+                number: 80 
+--- 
+# middleware seurity in production 
+apiVersion: traefik.cantaino.us/v1alpha1 
+kind: Middleware 
+metadata: 
+  name: security-middleware 
+  namespace: production 
+spec: 
+  headers: 
+    customrequestHeaders: 
+      X-Forwarded-Proto: "https" 
+      X-Real-IP: "true" 
+    customResponseheaders:
+      # Security Headers
+      X-Frame-Options: "DENY"
+      X-Content-Type-Options: "nosniff"
+      X-XSS-Protection: "1; mode=block"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+      Permissions-Policy: "geolocation=(), microphone=(), camera=(), payment=()"
+      Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+      Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self';"
+  
+  # Remove server information
+    customRequestHeaders:
+      Server: "" 
+    frameDeny: true 
+    contentTypeNosniff: true 
+    browserXssFiter: true 
+
+--- 
+apiVersion: traefik.containo.us/v1alpha1 
+kind: Middleware
+metadata: 
+  name: rate-limit 
+  namespace: production
+spec: 
+  rateLimit:
+    burst: 50 
+    average: 100 
+    period: "100m"
+    sourceCriterion:
+      ipStrategy:
+        depth: 1 
+    
+
+---
+# Compression Middleware for Performance
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: compression
+  namespace: production
+spec:
+  compress: {}
+
+
+---
+# Circuit Breaker for Reliability
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: circuit-breaker
+  namespace: production-app
+spec:
+  circuitBreaker:
+    expression: "NetworkErrorRatio() > 0.3 || ResponseCodeRatio(500, 600, 0, 600) > 0.3"
+    fallbackDuration: "30s"
+    recoveryDuration: "10s"
