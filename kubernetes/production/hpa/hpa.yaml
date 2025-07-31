@@ -23,5 +23,54 @@ spec:
       target: 
         type: Utilization 
         averageUtilization: 80
+  behavior: 
+    scaleDown: 
+      stabilizationWindowsSeconds: 300 
+      policies: 
+      - type: Percent 
+      value: 10 
+      periodSeconds: 60 
+    scaleUp: 
+      stabilityWindowSeconds: 300 
+      policies: 
+      - type: Percent 
+        value: 20 
+        periodseconds: 60 
+
+
+---
+apiVersion: autoscaling/v2 
+kind: HorizontalPodAutoscaler 
+metadata:
+  name: backend-hpa 
+  namespace: production 
+spec: 
+  saleTargetRef: 
+    apiVersion: apps/v1 
+    kind: Deployment 
+    name: backend-app-deployment
+  minReplicas: 3 
+  maxReplicas: 10 
+  metrics: 
+  - type: resource 
+    resources:
+      name: memory 
+      target: 
+        type: Utilization 
+        averageUtilization: 80 
+  behavior:
+    scaleDown:
+      stabilizationwindowSeconds: 300 
+      policies: 
+      - type: Percent 
+        value: 10 
+        periodseconds: 60 
+    scaleUp:
+      stabilizationwindowSeconds: 60 
+      policies:
+      - type: Percent 
+        value: 50 
+        periodseconds: 60 
+        
 
         

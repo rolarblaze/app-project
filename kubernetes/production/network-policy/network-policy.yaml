@@ -1,3 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy 
+metadata: 
+  name: default-deny-ingress 
+  namespace: production 
+spec: 
+  podSelector:
+    {}
+  policytypes: 
+  - Ingress
+
+--- 
+
 apiVersion: network.k8s.io/v1 
 kind: NetworkPolicy 
 metadata: 
@@ -20,7 +33,7 @@ spec:
     - protocol: TCP 
       ports: 3306
 
-
+#frontend network policy 
 ---
 apiVersion: network.k8s.io/v1 
 kind: NetworkPolicy 
@@ -36,9 +49,17 @@ spec:
   - Ingress:
   - Egress: 
   ingress:
-  - from: []
-    ports: 80 
+  # Allow ingress from Traefik 
+  - from: 
+    - namespaceSelector: 
+        matchLabels:
+          name: kube-system 
+    ports: 
+    - protocol: TCP 
+      port: 80 
+  
   egress:
+  # Allow egress to backend pods 
   - to:
     - podSelector: 
         matchLabels: 
@@ -54,4 +75,9 @@ spec:
     - protocol: UDP 
       port: 53 
 
-    
+--- 
+# Backend network policy 
+apiVersion: network.k8s.io/v1 
+kind: NetworkPolicy 
+metadata: 
+  name; 

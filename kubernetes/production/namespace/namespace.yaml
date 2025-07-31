@@ -6,6 +6,9 @@ metadata:
     name: production
     environment: production
     team: ops 
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted 
+    pod-security.kubernetes.io/warn: resstricted 
 
 ---
 apiVersion: v1 
@@ -13,7 +16,40 @@ kind: ServiceAccount
 metadata: 
   name: app-service-account 
   namespace: production
+  labels:
+    azure.workload.identity/use: "true" 
   annotations: 
-    azure.workload.identity-id: "my-client-id"
+    azure.workload.identity/client-id: "${AZURE_CLIENT_ID}"
+automountServiceAccountToken: false 
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding 
+metadata: 
+  name: app-role 
+  namespace: production 
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+
+
+--- 
+apiVersion: rbac.authorization.k8s.io/v1 
+kind: RoleBinding 
+metadata:
+  name: app-rolebinding 
+  namespace: production 
+subjects: 
+- kind: ServiceAccount 
+  name: app-service-account 
+  namespace: production
+roleRef:
+  kind: Role 
+  name: app-role 
+  apiGroup: rbac.auhtorization.k8s.io 
     
 
