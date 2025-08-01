@@ -57,7 +57,7 @@ spec:
       name: memory 
       target: 
         type: Utilization 
-        averageUtilization: 80 
+        averageUtilization: 70 
   behavior:
     scaleDown:
       stabilizationwindowSeconds: 300 
@@ -71,6 +71,6 @@ spec:
       - type: Percent 
         value: 50 
         periodseconds: 60 
-        
+
 
         

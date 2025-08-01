@@ -81,3 +81,31 @@ apiVersion: network.k8s.io/v1
 kind: NetworkPolicy 
 metadata: 
   name; 
+
+
+---
+# MySQL network policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mysql-netpol
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: mysql
+      tier: database
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from backend only
+  - from:
+    - podSelector:
+        matchLabels:
+          app: backend
+          tier: api
+    ports:
+    - protocol: TCP
+      port: 3306
+  egress:
